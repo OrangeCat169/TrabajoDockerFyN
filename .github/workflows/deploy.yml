@@ -22,7 +22,7 @@ jobs:
             cd ~/todo-app
             
             if [ ! -d ".git" ]; then
-              git clone "https://github.com/${{ github.repository }}.git" .
+              git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
             else
               git fetch --all
               git reset --hard origin/main
