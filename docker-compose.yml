@@ -1,0 +1,25 @@
+services:
+  app:
+    build: .
+    ports:
+      - "80:80"
+    environment:
+      DB_HOST: bd
+      DB_NAME: nube
+      DB_USER: root
+      DB_PASSWORD: clase123
+      APP_VERSION: ${GITHUB_SHA:-1.0.0}
+    depends_on:
+      - bd
+
+  bd:
+    image: mariadb:11
+    environment:
+      MYSQL_ROOT_PASSWORD: clase123
+      MYSQL_DATABASE: nube
+    volumes:
+      - datos_mariadb:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+volumes:
+  datos_mariadb:
