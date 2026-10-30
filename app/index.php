@@ -1,6 +1,5 @@
 <?php
 
-
 declare(strict_types=1);
 
 $config = [
@@ -50,10 +49,23 @@ if ($pdo && $_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         switch ($accion) {
             case 'crear':
-                $titulo = trim((string) ($_POST['titulo'] ?? ''));
+                $titulo    = trim((string) ($_POST['titulo'] ?? ''));
+                $prioridad = $_POST['prioridad'] ?? 'media';
+                $categoria = trim((string) ($_POST['categoria'] ?? 'General'));
+                $vencimiento = $_POST['fecha_vencimiento'] ?? null;
+                if ($vencimiento === '') { $vencimiento = null; }
+
                 if ($titulo !== '') {
-                    $stmt = $pdo->prepare('INSERT INTO tareas (titulo) VALUES (:titulo)');
-                    $stmt->execute([':titulo' => mb_substr($titulo, 0, 150)]);
+                    $stmt = $pdo->prepare(
+                        'INSERT INTO tareas (titulo, prioridad, categoria, fecha_vencimiento) 
+                         VALUES (:titulo, :prioridad, :categoria, :vencimiento)'
+                    );
+                    $stmt->execute([
+                        ':titulo'      => mb_substr($titulo, 0, 150),
+                        ':prioridad'   => $prioridad,
+                        ':categoria'   => mb_substr($categoria, 0, 50),
+                        ':vencimiento' => $vencimiento
+                    ]);
                 }
                 break;
 
@@ -82,7 +94,7 @@ $tareas = [];
 if ($pdo && !$error) {
     try {
         $tareas = $pdo->query(
-            'SELECT id, titulo, completada, creada_en
+            'SELECT id, titulo, completada, prioridad, categoria, fecha_vencimiento, creada_en
                FROM tareas
            ORDER BY completada ASC, creada_en DESC'
         )->fetchAll();
@@ -115,18 +127,20 @@ function e(string $v): string
             margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
             background: var(--bg); color: var(--text);
         }
-        main { max-width: 640px; margin: 48px auto; padding: 0 16px; }
+        main { max-width: 680px; margin: 48px auto; padding: 0 16px; }
         h1 { margin: 0 0 4px; font-size: 1.8rem; }
         .sub { color: var(--muted); margin: 0 0 24px; }
         .card {
             background: var(--card); border: 1px solid var(--line);
             border-radius: 12px; padding: 20px;
         }
-        form.nueva { display: flex; gap: 8px; margin-bottom: 16px; }
-        input[type=text] {
-            flex: 1; padding: 10px 12px; border: 1px solid var(--line);
-            border-radius: 8px; font-size: 1rem;
+        form.nueva { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+        .form-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        input[type=text], input[type=datetime-local], select {
+            padding: 10px 12px; border: 1px solid var(--line);
+            border-radius: 8px; font-size: .95rem;
         }
+        input[type=text].titulo-input { flex: 2; min-width: 200px; }
         button {
             border: 0; border-radius: 8px; padding: 10px 14px; cursor: pointer;
             font-size: .95rem; background: var(--accent); color: #fff;
@@ -136,17 +150,23 @@ function e(string $v): string
         ul { list-style: none; margin: 0; padding: 0; }
         li {
             display: flex; align-items: center; gap: 10px;
-            padding: 10px 0; border-top: 1px solid var(--line);
+            padding: 12px 0; border-top: 1px solid var(--line);
         }
-        li .titulo { flex: 1; }
+        li .info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
         li.hecha .titulo { text-decoration: line-through; color: var(--muted); }
-        li .fecha { color: var(--muted); font-size: .8rem; }
+        .meta { display: flex; gap: 8px; font-size: .8rem; color: var(--muted); align-items: center; }
+        .badge {
+            padding: 2px 6px; border-radius: 4px; font-size: .75rem; font-weight: 600; text-transform: uppercase;
+        }
+        .badge-alta { background: #fdecec; color: #d64545; }
+        .badge-media { background: #eef4ff; color: #2f6fde; }
+        .badge-baja { background: #e6f7f0; color: #1f9d6b; }
         .check {
             width: 22px; height: 22px; border-radius: 50%; padding: 0;
             border: 2px solid var(--line); background: #fff;
         }
         li.hecha .check { background: var(--ok); border-color: var(--ok); }
-        .stats { display: flex; gap: 16px; color: var(--muted); font-size: .9rem; margin-bottom: 8px; }
+        .stats { display: flex; gap: 16px; color: var(--muted); font-size: .9rem; margin-bottom: 12px; }
         .vacio { color: var(--muted); text-align: center; padding: 24px 0; }
         .error {
             background: #fdecec; color: #8a1f1f; border: 1px solid #f5c2c2;
@@ -171,8 +191,19 @@ function e(string $v): string
 
         <form class="nueva" method="post">
             <input type="hidden" name="accion" value="crear">
-            <input type="text" name="titulo" maxlength="150" placeholder="Nueva tarea…" required>
-            <button type="submit">Agregar</button>
+            <div class="form-row">
+                <input class="titulo-input" type="text" name="titulo" maxlength="150" placeholder="Nueva tarea…" required>
+                <select name="prioridad">
+                    <option value="baja">Prioridad Baja</option>
+                    <option value="media" selected>Prioridad Media</option>
+                    <option value="alta">Prioridad Alta</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <input type="text" name="categoria" placeholder="Categoría (ej. DevOps)" value="General">
+                <input type="datetime-local" name="fecha_vencimiento" title="Fecha de vencimiento">
+                <button type="submit">Agregar Tarea</button>
+            </div>
         </form>
 
         <div class="stats">
@@ -191,8 +222,18 @@ function e(string $v): string
                             <input type="hidden" name="id" value="<?= (int) $t['id'] ?>">
                             <button class="check" type="submit" title="Marcar / desmarcar"></button>
                         </form>
-                        <span class="titulo"><?= e($t['titulo']) ?></span>
-                        <span class="fecha"><?= e(date('d-m-Y H:i', strtotime($t['creada_en']))) ?></span>
+                        
+                        <div class="info">
+                            <span class="titulo"><?= e($t['titulo']) ?></span>
+                            <div class="meta">
+                                <span class="badge badge-<?= e($t['prioridad'] ?? 'media') ?>"><?= e($t['prioridad'] ?? 'media') ?></span>
+                                <span>📁 <?= e($t['categoria'] ?? 'General') ?></span>
+                                <?php if (!empty($t['fecha_vencimiento'])): ?>
+                                    <span>⏰ Vence: <?= e(date('d-m-Y H:i', strtotime($t['fecha_vencimiento']))) ?></span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
                         <form method="post">
                             <input type="hidden" name="accion" value="eliminar">
                             <input type="hidden" name="id" value="<?= (int) $t['id'] ?>">
