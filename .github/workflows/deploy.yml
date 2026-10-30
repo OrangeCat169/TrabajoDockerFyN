@@ -27,3 +27,17 @@ jobs:
             export GITHUB_SHA=$(git rev-parse --short HEAD)
             docker compose down
             docker compose up -d --build
+
+      - name: Verificar que la web responde correctamente
+        run: |
+          for i in {1..5}; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.AZURE_VM_HOST }}/)
+            if [ "$response" -eq 200 ]; then
+              echo "La web responde correctamente con código HTTP 200."
+              exit 0
+            fi
+            echo "Intento $i: Esperando a que la aplicación responda..."
+            sleep 5
+          done
+          echo "Error crítico: La web no responde y el workflow ha fallado."
+          exit 1
