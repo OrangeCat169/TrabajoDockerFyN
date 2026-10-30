@@ -19,7 +19,8 @@ services:
       MYSQL_DATABASE: nube
     volumes:
       - datos_mariadb:/var/lib/mysql
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./database/migration.sql:/docker-entrypoint-initdb.d/02-migration.sql:ro
 
 volumes:
   datos_mariadb:
