@@ -1,6 +1,6 @@
 services:
   app:
-    build: .
+    build: ./app
     ports:
       - "80:80"
     environment:
