@@ -7,6 +7,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
@@ -18,17 +20,10 @@ jobs:
           username: ${{ secrets.AZURE_VM_USER }}
           key: ${{ secrets.AZURE_VM_SSH_KEY }}
           script: |
+            rm -rf ~/todo-app
             mkdir -p ~/todo-app
             cd ~/todo-app
-            
-            if [ ! -d ".git" ]; then
-              git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-            else
-              git fetch --all
-              git reset --hard origin/main
-            fi
-
+            git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
             export GITHUB_SHA=$(git rev-parse --short HEAD)
-
             docker compose down
             docker compose up -d --build
