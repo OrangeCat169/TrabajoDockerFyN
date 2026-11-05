@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   app:
     build: ./app
@@ -10,7 +12,13 @@ services:
       DB_PASSWORD: clase123
       APP_VERSION: ${GITHUB_SHA:-1.0.0}
     depends_on:
-      - bd
+      bd:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
   bd:
     image: mariadb:11
@@ -21,6 +29,11 @@ services:
       - datos_mariadb:/var/lib/mysql
       - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
       - ./database/migration.sql:/docker-entrypoint-initdb.d/02-migration.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.pl", "--connect", "--username=root", "--password=clase123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   datos_mariadb:
